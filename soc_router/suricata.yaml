@@ -1,0 +1,71 @@
+%YAML 1.1
+---
+default-log-dir: /var/log/suricata
+
+stats:
+  enabled: yes
+  interval: 10
+
+outputs:
+  - fast:
+      enabled: yes
+      filename: fast.log
+      append: yes
+
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: eve.json
+      types:
+        - alert:
+            payload: yes
+            payload-buffer-size: 4kb
+            packet: yes
+            metadata: yes
+            http-body: yes
+            tagged-packets: yes
+        - http:
+            extended: yes
+        - dns:
+            version: 2
+        - tls:
+            extended: yes
+        - files:
+            force-magic: no
+        - flow
+
+vars:
+  address-groups:
+    HOME_NET: "[10.10.20.0/24,10.10.30.0/24]"
+    EXTERNAL_NET: "[10.10.10.0/24,!$HOME_NET]"
+    HTTP_SERVERS: "[10.10.20.50]"
+    INTERNAL_SERVERS: "[10.10.30.50]"
+  port-groups:
+    HTTP_PORTS: "80,8080,3000"
+
+default-rule-path: /etc/suricata/custom-rules
+
+rule-files:
+  - local.rules
+
+app-layer:
+  protocols:
+    http:
+      enabled: yes
+      libhtp:
+        default-config:
+          personality: IDS
+          request-body-limit: 100kb
+          response-body-limit: 100kb
+
+threading:
+  set-cpu-affinity: no
+  detect-thread-ratio: 1.0
+
+pcap:
+  - interface: eth0
+    checksum-checks: no
+  - interface: eth1
+    checksum-checks: no
+  - interface: eth2
+    checksum-checks: no

@@ -1,0 +1,31 @@
+title: DMZ to Internal Lateral Movement Detection
+id: a7d94f2b-5813-4e89-b883-9b43d2c918ef
+status: experimental
+description: Detects outbound network traffic originating from DMZ web servers targeting internal corporate core subnets.
+author: Cyber Range Architect
+references:
+    - https://attack.mitre.org/techniques/T1021/
+    - https://attack.mitre.org/techniques/T1190/
+tags:
+    - attack.lateral_movement
+    - attack.t1021
+    - attack.t1190
+logsource:
+    category: network_traffic
+    product: zeek_or_suricata
+detection:
+    selection_src:
+        src_ip|cidr: '10.10.20.0/24'
+    selection_dst:
+        dst_ip|cidr: '10.10.30.0/24'
+    selection_ports:
+        dst_port:
+            - 22
+            - 5000
+            - 3306
+            - 5432
+            - 445
+    condition: selection_src and selection_dst and selection_ports
+falsepositives:
+    - Scheduled database sync batch jobs (should be whitelisted by source IP/port)
+level: high

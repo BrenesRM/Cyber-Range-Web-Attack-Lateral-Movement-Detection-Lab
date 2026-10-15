@@ -1,0 +1,114 @@
+# ==============================================================================
+# CYBER RANGE LAB: Web Attack & Lateral Movement Detection
+# Multi-Segment Topology: External (Attacker) | DMZ | Internal Corporate (SOC)
+# ==============================================================================
+version: "3.8"
+
+networks:
+  net_external:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.10.10.0/24
+          gateway: 10.10.10.254
+
+  net_dmz:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.10.20.0/24
+          gateway: 10.10.20.254
+
+  net_internal:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.10.30.0/24
+          gateway: 10.10.30.254
+
+services:
+  # ----------------------------------------------------------------------------
+  # 0. Central Firewall / Router & Inline SOC IDS Sensor (Suricata)
+  # ----------------------------------------------------------------------------
+  edge-router-soc:
+    build:
+      context: ./soc_router
+      dockerfile: Dockerfile
+    container_name: cr-edge-router-soc
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    networks:
+      net_external:
+        ipv4_address: 10.10.10.1
+      net_dmz:
+        ipv4_address: 10.10.20.1
+      net_internal:
+        ipv4_address: 10.10.30.1
+    volumes:
+      - ./soc_router/rules:/etc/suricata/custom-rules:ro
+      - ./soc_router/logs:/var/log/suricata
+    ports:
+      - "8089:80"     # Optional: Management or Web monitor
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # 1. External / Red Zone: Attacker Node (Alpine Security Toolset)
+  # ----------------------------------------------------------------------------
+  attacker:
+    build:
+      context: ./attacker
+      dockerfile: Dockerfile
+    container_name: cr-attacker-node
+    cap_add:
+      - NET_ADMIN
+    networks:
+      net_external:
+        ipv4_address: 10.10.10.5
+    depends_on:
+      - edge-router-soc
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ip route del default 2>/dev/null || true
+        ip route add default via 10.10.10.1
+        echo "Attacker ready. Default gateway set to 10.10.10.1"
+        tail -f /dev/null
+
+  # ----------------------------------------------------------------------------
+  # 2. DMZ / Yellow Zone: Vulnerable Web Application (DVWA)
+  # ----------------------------------------------------------------------------
+  dmz-web:
+    image: vulnerables/web-dvwa:latest
+    container_name: cr-dmz-web
+    cap_add:
+      - NET_ADMIN
+    networks:
+      net_dmz:
+        ipv4_address: 10.10.20.50
+    environment:
+      - PHP_OPTIONS=-d allow_url_include=on -d allow_url_fopen=on
+    depends_on:
+      - edge-router-soc
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # 3. Internal / Blue Zone: Internal Database & Corporate Asset
+  # ----------------------------------------------------------------------------
+  internal-corporate:
+    build:
+      context: ./internal_asset
+      dockerfile: Dockerfile
+    container_name: cr-internal-corp
+    cap_add:
+      - NET_ADMIN
+    networks:
+      net_internal:
+        ipv4_address: 10.10.30.50
+    depends_on:
+      - edge-router-soc
+    restart: unless-stopped

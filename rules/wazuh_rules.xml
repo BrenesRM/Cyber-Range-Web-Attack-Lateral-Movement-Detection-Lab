@@ -1,0 +1,49 @@
+<!-- ========================================================================= -->
+<!-- WAZUH CUSTOM RULES: Web Attack & Lateral Movement Detection             -->
+<!-- Path: /var/ossec/etc/rules/local_rules.xml                                -->
+<!-- ========================================================================= -->
+<group name="cyber_range,web_attack,lateral_movement,">
+
+  <!-- 1. Detection of SQL Injection in Web Access Logs -->
+  <rule id="100100" level="10">
+    <if_group>web,accesslog</if_group>
+    <regex>union.*select|or%201=1|%27%20or%20%271%27=%271</regex>
+    <description>Cyber Range: Web Application SQL Injection attempt detected.</description>
+    <mitre>
+      <id>T1190</id>
+    </mitre>
+  </rule>
+
+  <!-- 2. Detection of Path Traversal / LFI -->
+  <rule id="100101" level="8">
+    <if_group>web,accesslog</if_group>
+    <url>/etc/passwd|\.\./\.\./</url>
+    <description>Cyber Range: Directory Traversal (LFI) attempt detected.</description>
+    <mitre>
+      <id>T1083</id>
+    </mitre>
+  </rule>
+
+  <!-- 3. Detection of Suspicious Outbound Connection from DMZ (Lateral Movement) -->
+  <rule id="100102" level="12">
+    <if_sid>510</if_sid>
+    <srcip>10.10.20.0/24</srcip>
+    <dstip>10.10.30.50</dstip>
+    <description>Cyber Range CRITICAL: DMZ Host initiated connection to Internal Corporate Asset (Lateral Movement Pivot).</description>
+    <mitre>
+      <id>T1021</id>
+      <id>T1570</id>
+    </mitre>
+  </rule>
+
+  <!-- 4. Detection of Direct Perimeter Scanning Attempts -->
+  <rule id="100103" level="9">
+    <srcip>10.10.10.0/24</srcip>
+    <dstip>10.10.30.0/24</dstip>
+    <description>Cyber Range: External Attacker probing Internal Network (Perimeter Breach Attempt).</description>
+    <mitre>
+      <id>T1046</id>
+    </mitre>
+  </rule>
+
+</group>
