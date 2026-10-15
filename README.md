@@ -2,6 +2,9 @@
 
 Laboratorio automatizado multi-segmento diseñado para entrenamiento y pruebas de **Red Team**, **Blue Team** y **Purple Team**.
 
+> [!TIP]
+> 📚 **Material Pedagógico:** Consulta la [Guía Práctica para Estudiantes (GUIA_ESTUDIANTE.md)](GUIA_ESTUDIANTE.md) para realizar paso a paso los ejercicios del laboratorio, y el [Informe Técnico (report.md)](report.md) para el análisis forense de telemetría y hardening.
+
 ---
 
 ## 1. Arquitectura de Red y Topología
